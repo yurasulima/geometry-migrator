@@ -6,6 +6,9 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   publish:
     name: Publish
@@ -29,16 +32,20 @@ jobs:
 
       - name: Publish to Maven Central
         env:
-          OSSRH_USERNAME:  ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD:  ${{ secrets.OSSRH_PASSWORD }}
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          CENTRAL_USERNAME:       ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD:       ${{ secrets.CENTRAL_PASSWORD }}
+          OSSRH_USERNAME:         ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD:         ${{ secrets.OSSRH_PASSWORD }}
           GPG_KEY_ID:      ${{ secrets.GPG_KEY_ID }}
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_PASSPHRASE:  ${{ secrets.GPG_PASSPHRASE }}
-        run: ./gradlew publishMavenJavaPublicationToOSSRHRepository --no-daemon
+        run: ./gradlew releaseToCentral --no-daemon
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref_type == 'tag'
         with:
           generate_release_notes: true
           files: |
