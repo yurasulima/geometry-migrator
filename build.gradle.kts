@@ -57,7 +57,7 @@ publishing {
             pom {
                 name.set("Geometry Migrator")
                 description.set(
-                    "Kotlin library for migrating Minecraft Bedrock Edition .geo.json " +
+                    "Kotlin library for migrating Minecraft Bedrock Edition .json " +
                     "geometry files across all supported format versions (1.8.0 – 1.21.0)."
                 )
                 url.set("https://github.com/yurasulima/geometry-migrator")
