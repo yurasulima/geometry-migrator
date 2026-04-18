@@ -11,7 +11,7 @@ plugins {
 
 
 group   = "io.github.yurasulima"
-version = "1.0.1"
+version = "1.0.5"
 
 
 
