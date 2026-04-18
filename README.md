@@ -1,20 +1,13 @@
 # Geometry Migrator
 
-<p align="center">
-  <strong>Modern Kotlin library for migrating Minecraft Bedrock Edition geometry JSON across format versions.</strong>
-</p>
+**Modern Kotlin library for migrating Minecraft Bedrock Edition geometry JSON across format versions.**
 
-<p align="center">
-  Convert legacy <code>.geo.json</code> files into newer Bedrock geometry formats with a simple API, predictable migration steps, and test-covered behavior.
-</p>
+Convert legacy `.geo.json` files into newer Bedrock geometry formats with a simple API, predictable migration steps, and test-covered behavior.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0-0f766e?style=for-the-badge" alt="Version 1.0.0" />
-  <img src="https://img.shields.io/github/downloads/yurasulima/geometry-migrator/total?style=for-the-badge&color=0f766e" alt="GitHub downloads" />
-  <img src="https://img.shields.io/badge/kotlin-1.9.23-1f6feb?style=for-the-badge" alt="Kotlin 1.9.23" />
-  <img src="https://img.shields.io/badge/java-17+-ea580c?style=for-the-badge" alt="Java 17+" />
-  <img src="https://img.shields.io/badge/license-MIT-111827?style=for-the-badge" alt="MIT License" />
-</p>
+![Maven Central Version](https://img.shields.io/maven-central/v/io.github.yurasulima/geometry-migrator?style=for-the-badge)
+![Kotlin](https://img.shields.io/badge/kotlin-1.9.23-1f6feb?style=for-the-badge)
+![Java](https://img.shields.io/badge/java-17+-ea580c?style=for-the-badge)
+![License](https://img.shields.io/badge/license-MIT-111827?style=for-the-badge)
 
 ## Overview
 
@@ -50,7 +43,7 @@ The library currently includes these migration steps:
 
 Default target version: `1.21.0`
 
-Current library version: `1.0.0`
+Current library version: see the Maven Central badge above.
 
 ## Installation
 
@@ -58,7 +51,7 @@ Current library version: `1.0.0`
 
 ```kotlin
 dependencies {
-    implementation("io.github.yurasulima:geometry-migrator:1.0.0")
+    implementation("io.github.yurasulima:geometry-migrator:1.0.6")
 }
 ```
 
@@ -66,7 +59,7 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'io.github.yurasulima:geometry-migrator:1.0.0'
+    implementation 'io.github.yurasulima:geometry-migrator:1.0.6'
 }
 ```
 
@@ -76,7 +69,7 @@ dependencies {
 <dependency>
   <groupId>io.github.yurasulima</groupId>
   <artifactId>geometry-migrator</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.6</version>
 </dependency>
 ```
 
@@ -179,10 +172,6 @@ Build the library:
 ```bash
 ./gradlew build
 ```
-
-## Roadmap Ideas
-
-- provide a CLI wrapper for batch migration
 
 ## License
 
