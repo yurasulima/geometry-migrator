@@ -1,6 +1,10 @@
 import java.net.URI
 import java.net.HttpURLConnection
 import java.util.Base64
+import java.util.UUID
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 
 plugins {
     kotlin("jvm") version "1.9.23"
@@ -11,7 +15,7 @@ plugins {
 
 
 group   = "io.github.yurasulima"
-version = "1.0.5"
+version = "1.0.6"
 
 
 
@@ -38,6 +42,10 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+val centralStagingDir = layout.buildDirectory.dir("central-staging")
+val centralBundleDir = layout.buildDirectory.dir("central-publishing")
+val centralBundleZip = centralBundleDir.map { it.file("central-bundle.zip") }
 
 
 publishing {
@@ -80,17 +88,16 @@ publishing {
 
     repositories {
         maven {
-            name = "OSSRH"
+            name = "CentralBundle"
+            url = centralStagingDir.get().asFile.toURI()
+        }
+
+        maven {
+            name = "CentralSnapshots"
             url = uri("https://central.sonatype.com/api/v1/publisher/upload")
             credentials {
-                username = providers.gradleProperty("centralUsername")
-                    .orElse(providers.gradleProperty("ossrhUsername"))
-                    .orElse(providers.environmentVariable("OSSRH_USERNAME"))
-                    .orNull
-                password = providers.gradleProperty("centralPassword")
-                    .orElse(providers.gradleProperty("ossrhPassword"))
-                    .orElse(providers.environmentVariable("OSSRH_PASSWORD"))
-                    .orNull
+                username = providers.environmentVariable("OSSRH_USERNAME").orNull
+                password = providers.environmentVariable("OSSRH_PASSWORD").orNull
             }
         }
     }
@@ -107,46 +114,93 @@ signing {
 }
 
 tasks.withType<Sign>().configureEach {
-    onlyIf { gradle.taskGraph.hasTask(":publishMavenJavaPublicationToOSSRHRepository") }
+    onlyIf {
+        gradle.taskGraph.hasTask(":publishMavenJavaPublicationToCentralBundleRepository") ||
+            gradle.taskGraph.hasTask(":publishMavenJavaPublicationToCentralSnapshotsRepository")
+    }
 }
 
-val centralTokenUsername = providers.gradleProperty("centralUsername")
-    .orElse(providers.gradleProperty("ossrhUsername"))
-    .orElse(providers.environmentVariable("CENTRAL_USERNAME"))
-    .orElse(providers.environmentVariable("CENTRAL_TOKEN_USERNAME"))
-    .orElse(providers.environmentVariable("OSSRH_USERNAME"))
+val centralTokenUsername = providers.environmentVariable("OSSRH_USERNAME").orNull
+val centralTokenPassword =  providers.environmentVariable("OSSRH_PASSWORD").orNull
 
-val centralTokenPassword = providers.gradleProperty("centralPassword")
-    .orElse(providers.gradleProperty("ossrhPassword"))
-    .orElse(providers.environmentVariable("CENTRAL_PASSWORD"))
-    .orElse(providers.environmentVariable("CENTRAL_TOKEN_PASSWORD"))
-    .orElse(providers.environmentVariable("OSSRH_PASSWORD"))
+tasks.withType<PublishToMavenRepository>().configureEach {
+    onlyIf {
+        when (repository.name) {
+            "CentralBundle" -> !version.toString().endsWith("SNAPSHOT")
+            "CentralSnapshots" -> version.toString().endsWith("SNAPSHOT")
+            else -> true
+        }
+    }
+}
+
+val createCentralBundle = tasks.register("createCentralBundle") {
+    group = "publishing"
+    description = "Creates a Maven Central deployment bundle zip from the staged Maven layout."
+    dependsOn("publishMavenJavaPublicationToCentralBundleRepository")
+    outputs.file(centralBundleZip)
+
+    doLast {
+        val stagingRoot = centralStagingDir.get().asFile
+        val bundleRoot = centralBundleDir.get().asFile
+        val bundleFile = centralBundleZip.get().asFile
+
+        bundleRoot.mkdirs()
+        if (bundleFile.exists()) {
+            bundleFile.delete()
+        }
+
+        ZipOutputStream(bundleFile.outputStream().buffered()).use { zip ->
+            stagingRoot.walkTopDown()
+                .filter { it.isFile }
+                .forEach { file ->
+                    val relative = file.relativeTo(stagingRoot).invariantSeparatorsPath
+                    zip.putNextEntry(ZipEntry(relative))
+                    file.inputStream().use { input -> input.copyTo(zip) }
+                    zip.closeEntry()
+                }
+        }
+    }
+}
 
 val publishToCentralPortal = tasks.register("publishToCentralPortal") {
     group = "publishing"
-    description = "Uploads the staged release from the OSSRH compatibility API into the Central Publisher Portal."
-    dependsOn("publishMavenJavaPublicationToOSSRHRepository")
+    description = "Uploads a Central deployment bundle to the Central Publisher Portal."
+    dependsOn(createCentralBundle)
     onlyIf { !version.toString().endsWith("SNAPSHOT") }
 
     doLast {
-        val username = centralTokenUsername.orNull
-            ?: error("Missing Central Portal username/token username. Set centralUsername or CENTRAL_TOKEN_USERNAME.")
-        val password = centralTokenPassword.orNull
-            ?: error("Missing Central Portal password/token password. Set centralPassword or CENTRAL_TOKEN_PASSWORD.")
+        val username = centralTokenUsername ?: error("Missing Central Portal username/token username.")
+        val password = centralTokenPassword ?: error("Missing Central Portal password/token password.")
+        val bundleFile = centralBundleZip.get().asFile
+        require(bundleFile.exists()) { "Central bundle not found: ${bundleFile.absolutePath}" }
 
         val token = Base64.getEncoder()
             .encodeToString("$username:$password".toByteArray(Charsets.UTF_8))
-        val namespace = project.group.toString()
+        val boundary = "----CodexCentral${UUID.randomUUID()}"
+        val lineBreak = "\r\n"
         val endpoint = URI(
-            "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/" +
-                "$namespace?publishing_type=automatic"
+            "https://central.sonatype.com/api/v1/publisher/upload" +
+                "?name=${project.name}-${project.version}&publishingType=AUTOMATIC"
         ).toURL()
 
         val connection = endpoint.openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
         connection.setRequestProperty("Authorization", "Bearer $token")
         connection.setRequestProperty("Accept", "application/json")
-        connection.doOutput = false
+        connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+        connection.doOutput = true
+
+        connection.outputStream.buffered().use { output ->
+            output.write("--$boundary$lineBreak".toByteArray(Charsets.UTF_8))
+            output.write(
+                ("Content-Disposition: form-data; name=\"bundle\"; filename=\"${bundleFile.name}\"$lineBreak")
+                    .toByteArray(Charsets.UTF_8)
+            )
+            output.write("Content-Type: application/octet-stream$lineBreak$lineBreak".toByteArray(Charsets.UTF_8))
+            bundleFile.inputStream().use { input -> input.copyTo(output) }
+            output.write(lineBreak.toByteArray(Charsets.UTF_8))
+            output.write("--$boundary--$lineBreak".toByteArray(Charsets.UTF_8))
+        }
 
         val status = connection.responseCode
         if (status !in 200..299) {
@@ -160,6 +214,12 @@ val publishToCentralPortal = tasks.register("publishToCentralPortal") {
 
 tasks.register("releaseToCentral") {
     group = "publishing"
-    description = "Publishes the release and promotes it to Maven Central via the Central Publisher Portal."
+    description = "Publishes a release bundle directly to Maven Central via the Central Publisher Portal."
     dependsOn(publishToCentralPortal)
+}
+
+tasks.register("publishSnapshotToCentral") {
+    group = "publishing"
+    description = "Publishes a SNAPSHOT build to the Central snapshots repository."
+    dependsOn("publishMavenJavaPublicationToCentralSnapshotsRepository")
 }
