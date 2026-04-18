@@ -81,22 +81,14 @@ publishing {
     repositories {
         maven {
             name = "OSSRH"
-            url = if (version.toString().endsWith("SNAPSHOT"))
-                URI("https://central.sonatype.com/repository/maven-snapshots/")
-            else
-                URI("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
-
+            url = uri("https://central.sonatype.com/api/v1/publisher/upload")
             credentials {
                 username = providers.gradleProperty("centralUsername")
                     .orElse(providers.gradleProperty("ossrhUsername"))
-                    .orElse(providers.environmentVariable("CENTRAL_USERNAME"))
-                    .orElse(providers.environmentVariable("CENTRAL_TOKEN_USERNAME"))
                     .orElse(providers.environmentVariable("OSSRH_USERNAME"))
                     .orNull
                 password = providers.gradleProperty("centralPassword")
                     .orElse(providers.gradleProperty("ossrhPassword"))
-                    .orElse(providers.environmentVariable("CENTRAL_PASSWORD"))
-                    .orElse(providers.environmentVariable("CENTRAL_TOKEN_PASSWORD"))
                     .orElse(providers.environmentVariable("OSSRH_PASSWORD"))
                     .orNull
             }
