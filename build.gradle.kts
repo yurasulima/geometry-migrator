@@ -96,17 +96,14 @@ publishing {
     }
 }
 
-// ── Signing ───────────────────────────────────────────────────────────────────
 signing {
-    val signingKey     = providers.environmentVariable("GPG_SIGNING_KEY").orNull
-    val signingKeyId   = providers.environmentVariable("GPG_KEY_ID").orNull
-    val signingPasswd  = providers.environmentVariable("GPG_PASSPHRASE").orNull
+    val signingKey = providers.environmentVariable("GPG_SIGNING_KEY").orNull
+    val signingPasswd = providers.environmentVariable("GPG_PASSPHRASE").orNull
 
-    if (signingKey != null) {
-        useInMemoryPgpKeys(signingKeyId, signingKey, signingPasswd)
+    if (signingKey != null && signingPasswd != null) {
+        useInMemoryPgpKeys(signingKey, signingPasswd)
+        sign(publishing.publications["mavenJava"])
     }
-
-    sign(publishing.publications["mavenJava"])
 }
 
 tasks.withType<Sign>().configureEach {

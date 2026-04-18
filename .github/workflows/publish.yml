@@ -3,8 +3,8 @@ name: Publish to Maven Central
 on:
   push:
     tags:
-      - 'v*.*.*'          # Спрацьовує на теги виду v1.0.0, v1.2.3 тощо
-  workflow_dispatch:       # Ручний запуск із GitHub UI
+      - 'v*.*.*'
+  workflow_dispatch:
 
 jobs:
   publish:
