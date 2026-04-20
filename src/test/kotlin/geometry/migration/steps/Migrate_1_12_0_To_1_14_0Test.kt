@@ -145,22 +145,6 @@ class Migrate_1_12_0_To_1_14_0Test {
         }
     }
 
-    @Nested inner class PivotWarning {
-
-        @Test fun `cube with pivot gets _pivot_flip_warning`() {
-            val result = migrate(geoWithCube("""
-                { "origin": [0,0,0], "size": [4,4,4], "uv": [0,0], "pivot": [2,2,2] }
-            """))
-            assertThat(result.firstCube().has("_pivot_flip_warning")).isTrue
-        }
-
-        @Test fun `cube without pivot has no warning`() {
-            val result = migrate(geoWithCube("""
-                { "origin": [0,0,0], "size": [4,4,4], "uv": [0,0] }
-            """))
-            assertThat(result.firstCube().has("_pivot_flip_warning")).isFalse
-        }
-    }
 
     @Nested inner class Locators {
 

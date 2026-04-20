@@ -11,8 +11,7 @@ import geometry.version.GeometryVersion
  *  1. Cubes convert simple `"uv": [u, v]` values into per-face UV objects
  *     using standard Minecraft box-UV coordinates.
  *  2. In 1.12, cube pivot values were flipped on the Y axis because of an engine bug.
- *     That was fixed in 1.14. Since it cannot be corrected safely in all cases,
- *     the migration adds a `_pivot_flip_warning` hint when a cube pivot is present.
+ *     That was fixed in 1.14. Since it cannot be corrected safely in all cases
  *  3. Locators convert from legacy `[x, y, z]` arrays to `{ "offset": [x, y, z] }` objects.
  */
 class Migrate_1_12_0_To_1_14_0 : GeometryMigrationStep {
@@ -80,12 +79,7 @@ class Migrate_1_12_0_To_1_14_0 : GeometryMigrationStep {
             cube.remove("uv")
             cube.add("uv", perFace)
 
-            if (cube.has("pivot")) {
-                cube.addProperty(
-                    "_pivot_flip_warning",
-                    "In 1.12 cube pivot was flipped upside-down. Verify this pivot is correct after migration to 1.14."
-                )
-            }
+
         }
     }
 
